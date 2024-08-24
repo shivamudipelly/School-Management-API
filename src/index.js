@@ -4,6 +4,8 @@ const schoolRoutes = require('./routers/schoolRoutes');
 
 dotenv.config();
 
+connectionUrl = "jdbc:mysql://sql6.freesqldatabase.com:3306/sql2727590"
+
 const app = express();
 app.use(express.json());
 

@@ -35,12 +35,29 @@ exports.addSchool = async (req, res) => {
   const { name, address, latitude, longitude } = req.body;
 
   try {
+    // Fetch all schools from the database
+    const [schools] = await db.query('SELECT * FROM schools');
+
+    // Manual check for existing school
+    const existingSchool = schools.find(school =>
+      school.name === name &&
+      parseFloat(school.latitude) === parseFloat(latitude) &&
+      parseFloat(school.longitude) === parseFloat(longitude)
+    );
+
+    if (existingSchool) {
+      return res.status(409).json({ message: 'A school with the same name, address, latitude, and longitude already exists' });
+    }
+
+    // Insert the new school into the database
     const [result] = await db.query(
       'INSERT INTO schools (name, address, latitude, longitude) VALUES (?, ?, ?, ?)',
       [name, address, parseFloat(latitude), parseFloat(longitude)]
     );
+
     res.status(201).json({ id: result.insertId, name, address, latitude, longitude, message: 'School added successfully' });
   } catch (err) {
+    console.error('Database error:', err.message);
     res.status(500).json({ message: 'Database error', error: err.message });
   }
 };
@@ -49,14 +66,14 @@ exports.addSchool = async (req, res) => {
 const haversineDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Radius of Earth in kilometers
   const rad = (deg) => (deg * Math.PI) / 180;
-  
+
   const dLat = rad(lat2 - lat1);
   const dLon = rad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
+
   return R * c; // Distance in kilometers
 };
 
@@ -71,7 +88,7 @@ exports.listSchools = async (req, res) => {
   try {
     // Fetch all schools from the database
     const [schools] = await db.query('SELECT * FROM schools');
-    
+
     // Calculate distance and sort schools by distance
     const sortedSchools = schools.map(school => {
       const distance = haversineDistance(
